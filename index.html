@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Máy Tính Giá Bán · Bảy Ích 2</title>
+<meta name="description" content="Từ giá nhập ra giá bán lẻ, kèm lãi thực sau khi làm tròn." />
+<meta name="theme-color" content="#2f5233" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%232f5233'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23e9c46a'/%3E%3C/svg%3E" />
+<!-- Social share -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Máy Tính Giá Bán · Bảy Ích 2" />
+<meta property="og:description" content="Từ giá nhập ra giá bán lẻ, kèm lãi thực sau khi làm tròn." />
+<meta property="og:image" content="https://bayich2-tinhgia.vercel.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://bayich2-tinhgia.vercel.app/" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Máy Tính Giá Bán · Bảy Ích 2" />
+<meta name="twitter:description" content="Từ giá nhập ra giá bán lẻ, kèm lãi thực sau khi làm tròn." />
+<meta name="twitter:image" content="https://bayich2-tinhgia.vercel.app/og.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#2f5233; --green-d:#243f27; --rice:#e9c46a; --rice-d:#d8ad4c; --cream:#f6f1e4;
+    --ink:#2a2620; --muted:#7a7367; --line:#e4dcc9; --card:#fffdf7;
+    --good:#2f7d4f; --good-bg:#e6f2ea; --warn:#b7791f; --warn-bg:#fbf1dd; --bad:#b23b3b; --bad-bg:#f8e6e4;
+    --shadow:0 8px 24px rgba(47,82,51,.09); --r:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Be Vietnam Pro",system-ui,sans-serif; color:var(--ink);
+    background:
+      radial-gradient(1200px 300px at 80% -60px, #efe7d1 0%, transparent 70%),
+      linear-gradient(180deg,#f2ecd8,#f6f1e4 260px);
+    min-height:100vh; padding:0 15px calc(46px + env(safe-area-inset-bottom));
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:580px;margin:0 auto;animation:rise .5s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+  header{padding:24px 4px 8px;text-align:center}
+  .brand{display:inline-flex;align-items:center;gap:9px;background:var(--green);color:var(--cream);
+    padding:8px 16px;border-radius:999px;font-weight:600;font-size:13px;letter-spacing:.4px}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--rice)}
+  h1{font-family:"Fraunces",serif;font-weight:600;font-size:30px;line-height:1.1;margin:16px 0 5px;color:var(--green-d)}
+  h1 .u{background:linear-gradient(transparent 62%, #f0dfae 62%)}
+  .sub{color:var(--muted);font-size:14px;margin:0}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 18px 20px;margin-top:18px}
+
+  .seg{display:flex;background:#efe7d3;border-radius:13px;padding:4px;gap:4px;margin-bottom:18px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);font-family:inherit;font-weight:600;
+    font-size:13.5px;padding:11px 6px;border-radius:10px;cursor:pointer;transition:.18s}
+  .seg button.on{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(47,82,51,.28)}
+
+  label{display:block;font-size:13.5px;font-weight:600;color:var(--green-d);margin:0 0 6px}
+  .field{margin-bottom:15px}
+  .row2{display:flex;gap:12px}
+  .row2>.field{flex:1;margin-bottom:15px}
+  input,select{width:100%;font-family:inherit;font-size:16px;font-weight:500;color:var(--ink);background:#fff;
+    border:1.5px solid var(--line);border-radius:12px;padding:13px 14px;outline:none;transition:border-color .15s,box-shadow .15s}
+  input::placeholder{color:#bcb4a3;font-weight:400}
+  input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(47,82,51,.13)}
+  .suffix{position:relative}
+  .suffix span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;font-weight:600;pointer-events:none}
+  .suffix input{padding-right:44px}
+  .hint{font-size:12px;color:var(--muted);margin:6px 2px 0;line-height:1.4}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+  .chips button{border:1.5px solid var(--line);background:#fff;color:var(--green-d);font-family:inherit;
+    font-weight:600;font-size:13px;padding:8px 14px;border-radius:999px;cursor:pointer;transition:.15s}
+  .chips button.on{background:var(--rice);border-color:var(--rice);color:var(--green-d)}
+  .chips button:active{transform:scale(.96)}
+
+  .out{background:linear-gradient(180deg,#fbfaf3,#f4efe1);border:1px solid var(--line);border-radius:15px;padding:16px 16px 17px;margin-top:6px}
+  .line{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;font-size:14px}
+  .line .k{color:var(--muted)} .line .v{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .hr{height:1px;background:var(--line);margin:7px 0}
+  .price{display:flex;justify-content:space-between;align-items:center;margin-top:7px;gap:10px;flex-wrap:wrap;row-gap:10px}
+  .price .lbl{font-size:13.5px;color:var(--green-d);font-weight:600}
+  .stepper{display:flex;align-items:center;border:1.5px solid var(--green);border-radius:13px;overflow:hidden;flex-shrink:0}
+  .stepper button{width:46px;height:48px;border:0;background:var(--green);color:#fff;font-size:24px;line-height:1;cursor:pointer;transition:background .12s}
+  .stepper button:active{background:var(--green-d)}
+  .stepper .val{min-width:98px;text-align:center;font-family:"Fraunces",serif;font-weight:600;font-size:23px;
+    color:var(--green-d);padding:0 8px;font-variant-numeric:tabular-nums}
+  .steptoggle{display:flex;gap:6px;justify-content:flex-end;align-items:center;margin-top:9px}
+  .steptoggle .lb{color:var(--muted);font-size:12px;margin-right:2px}
+  .steptoggle button{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:inherit;
+    font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+  .steptoggle button.on{background:var(--green);border-color:var(--green);color:#fff}
+
+  .badge{display:flex;gap:10px;margin-top:15px}
+  .badge .b{flex:1;border-radius:13px;padding:12px 12px;text-align:center;transition:background .18s,color .18s}
+  .badge .b .n{font-family:"Fraunces",serif;font-weight:700;font-size:21px;line-height:1.1;font-variant-numeric:tabular-nums}
+  .badge .b .t{font-size:11.5px;font-weight:600;margin-top:4px;opacity:.9}
+  .b.good{background:var(--good-bg);color:var(--good)} .b.warn{background:var(--warn-bg);color:var(--warn)}
+  .b.bad{background:var(--bad-bg);color:var(--bad)} .b.neutral{background:#eef0ea;color:var(--green-d)}
+
+  .note{border-radius:12px;padding:11px 13px;font-size:12.8px;line-height:1.45;margin-top:13px;display:none}
+  .note.show{display:block}
+  .note.warn{background:var(--warn-bg);border:1px solid #ecd9ac;color:#7a5a12}
+  .note.bad{background:var(--bad-bg);border:1px solid #eec6c2;color:#8f2f2f}
+
+  .sectiontitle{font-family:"Fraunces",serif;font-weight:600;font-size:20px;color:var(--green-d);margin:28px 4px 4px}
+  .listcap{color:var(--muted);font-size:12.5px;margin:2px 4px 12px}
+  .listcap b{color:var(--green-d)}
+  .search{position:relative;margin-bottom:12px}
+  .search input{padding-left:42px}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
+
+  .item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:13px 15px;margin-bottom:9px;cursor:pointer;transition:transform .12s,border-color .12s,box-shadow .12s;
+    text-align:left;width:100%;font-family:inherit;-webkit-tap-highlight-color:transparent}
+  .item:hover{border-color:var(--rice);box-shadow:0 4px 14px rgba(47,82,51,.07)}
+  .item:active{transform:scale(.99)}
+  .item .info{flex:1;min-width:0}
+  .item .nm{font-weight:600;font-size:14.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .meta{font-size:12px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .pr{text-align:right;flex-shrink:0}
+  .item .pr .big{font-family:"Fraunces",serif;font-weight:600;font-size:18px;color:var(--green-d);font-variant-numeric:tabular-nums}
+  .item .pr .sm{font-size:11px;color:var(--muted);margin-top:1px}
+
+  .skel{height:64px;border-radius:14px;margin-bottom:9px;background:linear-gradient(100deg,#f0ead9 30%,#f7f2e6 50%,#f0ead9 70%);
+    background-size:200% 100%;animation:sh 1.2s infinite}
+  @keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+  .empty,.err{text-align:center;color:var(--muted);font-size:13.5px;padding:22px 16px;background:var(--card);border:1px dashed var(--line);border-radius:14px}
+  .err b{color:var(--green-d);display:block;margin-bottom:4px;font-size:14.5px}
+  .retry{margin-top:12px;border:0;background:var(--green);color:#fff;font-family:inherit;font-weight:600;font-size:13.5px;padding:10px 20px;border-radius:999px;cursor:pointer}
+
+  .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px;line-height:1.7}
+  .foot b{color:var(--green-d)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot"></span> Tạp Hóa Bảy Ích 2</div>
+    <h1>Máy Tính <span class="u">Giá Bán</span></h1>
+    <p class="sub">Từ giá nhập → giá bán lẻ trong một chạm</p>
+  </header>
+
+  <div class="card">
+    <div class="seg" id="mode">
+      <button data-mode="pack" class="on">Nhập theo lố</button>
+      <button data-mode="unit">Nhập theo đơn vị</button>
+    </div>
+
+    <!-- PACK -->
+    <div id="packFields">
+      <div class="field">
+        <label>Giá nhập cả lố</label>
+        <div class="suffix"><input id="packPrice" inputmode="numeric" placeholder="310.000" /><span>đ</span></div>
+        <div class="hint">Giá một thùng / bành khi nhập về (gõ được 310k hoặc 310.000)</div>
+      </div>
+      <div class="field">
+        <label>Số đơn vị trong lố</label>
+        <input id="packQty" inputmode="numeric" placeholder="20" />
+        <div class="hint">Một lố có bao nhiêu cây / bịch để bán lẻ</div>
+      </div>
+    </div>
+
+    <!-- UNIT -->
+    <div id="unitFields" style="display:none">
+      <div class="field">
+        <label>Giá nhập mỗi đơn vị</label>
+        <div class="suffix"><input id="unitPrice" inputmode="numeric" placeholder="9.900" /><span>đ</span></div>
+        <div class="hint">Dùng cho hàng mua lẻ từng cái: muỗng, bịch, ký…</div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:8px">
+      <label>Lợi nhuận mong muốn</label>
+      <div class="suffix"><input id="margin" inputmode="numeric" value="10" /><span>%</span></div>
+      <div class="chips" id="marginChips">
+        <button data-m="10" class="on">10%</button><button data-m="15">15%</button>
+        <button data-m="20">20%</button><button data-m="25">25%</button><button data-m="30">30%</button>
+      </div>
+    </div>
+
+    <div class="out">
+      <div class="line"><span class="k">Giá nhập mỗi đơn vị</span><span class="v" id="oCost">—</span></div>
+      <div class="line"><span class="k">Giá bán đề xuất</span><span class="v" id="oSuggest">—</span></div>
+      <div class="hr"></div>
+      <div class="price">
+        <span class="lbl">Giá làm tròn</span>
+        <div class="stepper">
+          <button id="minus" aria-label="Giảm giá làm tròn">−</button>
+          <div class="val" id="rounded">—</div>
+          <button id="plus" aria-label="Tăng giá làm tròn">+</button>
+        </div>
+      </div>
+      <div class="steptoggle" id="stepToggle">
+        <span class="lb">Bước làm tròn</span>
+        <button data-step="500">500</button>
+        <button data-step="1000" class="on">1.000</button>
+      </div>
+      <div class="badge">
+        <div class="b neutral"><div class="n" id="bProfit">—</div><div class="t">Lời mỗi đơn vị</div></div>
+        <div class="b neutral"><div class="n" id="bMargin">—</div><div class="t">Lãi thực sau làm tròn</div></div>
+      </div>
+      <div class="note" id="warnNote"></div>
+    </div>
+  </div>
+
+  <div class="sectiontitle">Bảng giá bán đề xuất</div>
+  <div class="listcap" id="listCap">Giá bán cho toàn bộ mặt hàng theo mức đang chọn ở trên</div>
+  <div class="search">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <input id="q" placeholder="Tìm mặt hàng…" />
+  </div>
+  <div id="list"></div>
+
+  <div class="foot">
+    Chạm một mặt hàng để nạp vào máy tính<br/>
+    Tạp Hóa Bảy Ích 2
+  </div>
+</div>
+
+<script>
+/* ====== NGUỒN DỮ LIỆU ======
+   Đọc trực tiếp tab Retail (published CSV). Web CHỈ dùng 4 cột cốt lõi theo VỊ TRÍ:
+     A = Mặt Hàng · C = Giá Nhập Sỉ · D = Số Lượng · E = Đơn Vị Lẻ
+   Các cột còn lại (Đơn Vị Sỉ, Giá Nhập Lẻ, % Lợi Nhuận, Giá Bán Lẻ, Giá Làm Tròn, Thứ Tự)
+   web BỎ QUA — bạn tự tính tay trong Excel, hai hệ chạy song song để đối chiếu sai sót.
+   Lưu ý: đọc theo vị trí cột nên đừng chèn/xóa cột giữa bảng (thêm cột mới ở cuối). */
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDgOqo837JNRm5agJDJBTa4MOV0kkSzEYM-0XvYTXye6YaQxXFb3Q6dYn-Nn2N8PkzBVyZx26t6An9/pub?gid=932587590&single=true&output=csv";
+
+/* ====== HELPERS ====== */
+function parseNum(v){
+  if(v==null) return NaN;
+  let s=String(v).trim().toLowerCase().replace(/[đ%\s]/g,"");
+  if(!s) return NaN;
+  let mult=1;
+  if(s.endsWith("k")){mult=1000;s=s.slice(0,-1);}
+  s=s.replace(/[.,]/g,"");
+  const n=parseFloat(s);
+  return isNaN(n)?NaN:n*mult;
+}
+const fmt=n=>isFinite(n)?Math.round(n).toLocaleString("vi-VN"):"—";
+const roundTo=(n,s)=>Math.round(n/s)*s;
+function parseCSV(text){
+  const rows=[];let row=[],cell="",q=false;
+  text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=c;}
+    else{if(c==='"')q=true;else if(c===",")row.push(cell),cell="";
+      else if(c==="\n"){row.push(cell);rows.push(row);row=[];cell="";}else cell+=c;}}
+  if(cell!==""||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+
+/* ====== STATE ====== */
+let ITEMS=[];
+let mode="pack", step=1000, roundedVal=0, autoRounded=true;
+const $=id=>document.getElementById(id);
+
+/* ====== TÍNH TOÁN (một hàm duy nhất) ====== */
+function unitCost(){
+  if(mode==="unit") return parseNum($("unitPrice").value);
+  const p=parseNum($("packPrice").value), q=parseNum($("packQty").value);
+  if(!isFinite(p)||!isFinite(q)||q<=0) return NaN;
+  return p/q;
+}
+const curMargin=()=>parseNum($("margin").value)||0;
+
+function render(){
+  const cost=unitCost(), m=curMargin(), suggest=isFinite(cost)?cost*(1+m/100):NaN;
+  $("oCost").textContent    = isFinite(cost)    ? fmt(cost)+" đ"    : "—";
+  $("oSuggest").textContent = isFinite(suggest) ? fmt(suggest)+" đ" : "—";
+  if(!isFinite(suggest)){
+    roundedVal=0; $("rounded").textContent="—";
+    setBadge("bProfit","—","neutral"); setBadge("bMargin","—","neutral"); note("");
+    return;
+  }
+  if(autoRounded) roundedVal=roundTo(suggest,step);
+  $("rounded").textContent=fmt(roundedVal);
+
+  const profit=roundedVal-cost, effM=cost>0?profit/cost*100:0;
+  setBadge("bProfit", fmt(profit)+" đ", profit<=0?"bad":"neutral");
+  const cls = effM<0 ? "bad" : (effM < m-1.5 ? "warn" : "good");
+  setBadge("bMargin", effM.toFixed(1)+"%", cls);
+
+  if(effM<0) note("Giá làm tròn đang thấp hơn giá nhập — bán ra là lỗ. Tăng giá lên một bước.","bad");
+  else if(effM < m-1.5) note("Làm tròn xuống khiến lãi thực còn "+effM.toFixed(1)+"%, thấp hơn mức "+m+"% mong muốn. Cân nhắc làm tròn lên.","warn");
+  else note("");
+}
+function setBadge(id,txt,cls){
+  const n=$(id); n.textContent=txt; n.closest(".b").className="b "+cls;
+}
+function note(msg,cls){
+  const n=$("warnNote"); n.textContent=msg;
+  n.className="note"+(msg?(" show "+cls):"");
+}
+
+/* ====== BẢNG GIÁ ====== */
+const sellOf=it=>roundTo(it.giaLe*(1+curMargin()/100),step);
+function renderList(){
+  const q=$("q").value.trim().toLowerCase();
+  const rows=ITEMS.filter(it=>!q||it.name.toLowerCase().includes(q));
+  $("listCap").innerHTML=`Giá bán theo mức lợi nhuận <b>${curMargin()}%</b> · làm tròn <b>${step.toLocaleString("vi-VN")}</b>`;
+  const box=$("list");
+  if(!rows.length){box.innerHTML='<div class="empty">Không tìm thấy mặt hàng nào.</div>';return;}
+  box.innerHTML="";
+  rows.forEach(it=>{
+    const el=document.createElement("button"); el.className="item"; el.type="button";
+    const dv=it.dvLe.toLowerCase();
+    const pack=it.sl>1?`${fmt(it.giaSi)}đ/${it.sl} ${dv}`:`${fmt(it.giaSi)}đ`;
+    el.innerHTML=`<div class="info"><div class="nm">${it.name}</div>
+      <div class="meta">Nhập ${fmt(it.giaLe)}đ/${dv} · ${pack}</div></div>
+      <div class="pr"><div class="big">${fmt(sellOf(it))}đ</div><div class="sm">bán/${dv}</div></div>`;
+    el.onclick=()=>loadItem(it);
+    box.appendChild(el);
+  });
+}
+function loadItem(it){
+  if(it.sl>1){ setMode("pack"); $("packPrice").value=fmt(it.giaSi); $("packQty").value=it.sl; }
+  else       { setMode("unit"); $("unitPrice").value=fmt(it.giaSi); }
+  autoRounded=true; render();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ====== TẢI CSV ====== */
+async function load(){
+  const box=$("list");
+  box.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  try{
+    const url=CSV_URL+(CSV_URL.includes("?")?"&":"?")+"t="+Date.now();
+    const res=await fetch(url);
+    if(!res.ok) throw new Error("http");
+    const rows=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[0].trim());
+    ITEMS=rows.map(r=>{const giaSi=parseNum(r[2]),sl=parseNum(r[3])||1;
+      return {name:r[0].trim(),giaSi:giaSi,sl:sl,dvLe:(r[4]||"").trim(),giaLe:giaSi/sl};})
+      .filter(it=>isFinite(it.giaSi));
+    if(!ITEMS.length) throw new Error("empty");
+    renderList();
+  }catch(e){
+    ITEMS=[];
+    $("listCap").textContent="";
+    box.innerHTML='<div class="err"><b>Chưa tải được bảng giá</b>Kiểm tra kết nối mạng và quyền chia sẻ của Sheet, rồi thử lại. Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại</button></div>';
+  }
+}
+
+/* ====== WIRING ====== */
+function setMode(m){
+  mode=m;
+  document.querySelectorAll("#mode button").forEach(x=>x.classList.toggle("on",x.dataset.mode===m));
+  $("packFields").style.display = m==="pack"?"":"none";
+  $("unitFields").style.display = m==="unit"?"":"none";
+}
+document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{ setMode(b.dataset.mode); autoRounded=true; render(); });
+document.querySelectorAll("#marginChips button").forEach(b=>b.onclick=()=>{
+  $("margin").value=b.dataset.m;
+  document.querySelectorAll("#marginChips button").forEach(x=>x.classList.toggle("on",x===b));
+  autoRounded=true; render(); renderList();
+});
+document.querySelectorAll("#stepToggle button").forEach(b=>b.onclick=()=>{
+  step=parseInt(b.dataset.step);
+  document.querySelectorAll("#stepToggle button").forEach(x=>x.classList.toggle("on",x===b));
+  autoRounded=true; render(); renderList();
+});
+$("minus").onclick=()=>{ autoRounded=false; roundedVal=Math.max(0,roundedVal-step); render(); };
+$("plus").onclick =()=>{ autoRounded=false; roundedVal+=step; render(); };
+["packPrice","packQty","unitPrice","margin"].forEach(id=>{
+  const el=$(id);
+  el.addEventListener("input",()=>{ autoRounded=true; render(); if(id==="margin") renderList(); });
+  el.addEventListener("focus",()=>el.select());
+});
+$("q").addEventListener("input",renderList);
+
+/* ====== INIT ====== */
+load();
+render();
+</script>
+</body>
+</html>
