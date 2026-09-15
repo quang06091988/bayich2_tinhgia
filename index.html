@@ -259,11 +259,11 @@ const fmt=n=>isFinite(n)?Math.round(n).toLocaleString("vi-VN"):"—";
 const roundTo=(n,s)=>Math.round(n/s)*s;
 class LoiCot extends Error{}   // lỗi do Sheet (thiếu cột…) — báo đúng lời máy chủ, không thử lại
 const ngu=ms=>new Promise(r=>setTimeout(r,ms));
-/* Gọi Apps Script: thử 3 lần; lần nào quá 25 giây thì bỏ (Google kẹt — gọi lại thường nhanh hơn chờ tiếp).
-   Trang lỗi "không thể mở tệp" (404) của Google hay JSON sai dạng cũng tính là thất bại. */
+/* Gọi Apps Script: thử 5 lần, nghỉ tăng dần 1–4 giây; lần nào quá 25 giây thì bỏ (Google kẹt — gọi lại thường nhanh hơn chờ).
+   Trang lỗi "không thể mở tệp" (404) của Google hay JSON sai dạng cũng tính là thất bại — Google hay lỗi thành từng đợt. */
 async function layRetail(){
   let loi;
-  for(let lan=1;lan<=3;lan++){
+  for(let lan=1;lan<=5;lan++){
     if(lan>1) await ngu(1000*(lan-1));
     const ctl=new AbortController(), hg=setTimeout(()=>ctl.abort(),25000);
     try{
@@ -390,14 +390,28 @@ async function load(){
     try{ localStorage.setItem(KHOA_LUU, JSON.stringify(j)); }catch{}
     apDung(j);
     if(!ITEMS.length) throw new LoiCot("Tab Retail chưa có mặt hàng nào.");
+    soLanTuThu=0; clearInterval(hgTuThu);
     render(); renderList();
   }catch(e){
     if(luu && ITEMS.length){ $("listCap").innerHTML+=' · <span style="color:#b3261e">chưa tải được bản mới, đang dùng số lúc '+gioLuc(luu.thoiGian)+'</span>'; return; }
     ITEMS=[];
     $("listCap").textContent="";
-    const lyDo=e instanceof LoiCot ? e.message : (e.message||"")+" Kiểm tra kết nối mạng rồi thử lại.";
-    box.innerHTML='<div class="err"><b>Chưa tải được bảng giá</b>'+lyDo+' Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại</button></div>';
+    if(e instanceof LoiCot){   // lỗi do Sheet (thiếu cột…) — thử lại không giúp gì, chờ người sửa Sheet
+      box.innerHTML='<div class="err"><b>Chưa tải được bảng giá</b>'+e.message+' Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại</button></div>';
+      return;
+    }
+    henTuThuLai(e.message||"");
   }
+}
+/* Google đang trục trặc và chưa có gì để hiện: đếm ngược 15 giây rồi tự tải lại (tạm dừng khi màn hình ẩn), tối đa 20 lần. */
+let hgTuThu=null, soLanTuThu=0;
+function henTuThuLai(lyDo){
+  clearInterval(hgTuThu);
+  const box=$("list");
+  const ve=con=>{ box.innerHTML='<div class="err"><b>Google đang trục trặc'+(con!=null?' — tự thử lại sau '+con+' giây':'')+'</b>'+lyDo+' Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại ngay</button></div>'; };
+  if(++soLanTuThu>20){ ve(null); return; }
+  let con=15; ve(con);
+  hgTuThu=setInterval(()=>{ if(document.hidden) return; if(--con<=0){ clearInterval(hgTuThu); load(); } else ve(con); },1000);
 }
 
 /* ====== WIRING ====== */
