@@ -136,6 +136,20 @@
 
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px;line-height:1.7}
   .foot b{color:var(--green-d)}
+/* khung Mã PIN chung */
+.che-pin{position:fixed;inset:0;z-index:70;background:rgba(24,34,25,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.che-pin[hidden]{display:none}
+.hop-pin{width:100%;max-width:380px;background:#fffdf7;border-radius:16px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.25);font-family:inherit}
+.hop-pin .td-pin{display:block;font-size:18px;color:#2f5233;margin-bottom:4px}
+.hop-pin p{margin:0 0 12px;font-size:13.5px;color:#6d7a6e;line-height:1.45}
+.hop-pin input{width:100%;min-height:48px;border:1.5px solid #ded5bf;border-radius:10px;padding:8px 12px;font-size:22px;letter-spacing:.3em;text-align:center;background:#fff;box-sizing:border-box}
+.hop-pin input:focus{outline:none;border-color:#2f5233;box-shadow:0 0 0 3px rgba(47,82,51,.12)}
+.hop-pin .loi-pin{color:#b3261e;font-weight:600;min-height:1.3em;margin:8px 0}
+.hang-nut-pin{display:flex;gap:10px;justify-content:flex-end}
+.hang-nut-pin button{border:none;border-radius:12px;padding:12px 18px;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit}
+#huy-pin{background:#fff;color:#2f5233;border:1.5px solid #ded5bf}
+#nut-pin{background:#2f5233;color:#fff}
+#nut-pin:disabled{opacity:.5}
 </style>
 </head>
 <body>
@@ -224,6 +238,17 @@
   </div>
 </div>
 
+<!-- Mã PIN chung — hỏi một lần trên máy này trước khi xem giá nhập -->
+<div class="che-pin" id="hop-pin" hidden>
+  <div class="hop-pin" role="dialog" aria-modal="true" aria-labelledby="td-pin">
+    <b class="td-pin" id="td-pin">Nhập Mã PIN chung</b>
+    <p>Cần một lần trên máy này để xem giá nhập. Xem ô "Mã PIN chung" ở tab CauHinh trong Google Sheet bayich2.</p>
+    <input id="o-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="Mã PIN chung">
+    <p class="loi-pin" id="loi-pin" role="alert"></p>
+    <div class="hang-nut-pin"><button id="huy-pin" type="button">Huỷ</button><button id="nut-pin" type="button">Xác nhận</button></div>
+  </div>
+</div>
+
 <script>
 /* ====== NGUỒN DỮ LIỆU ======
    Tab Retail đọc qua Apps Script riêng "bayich2_tinhgia" (chỉ đọc) — tab Retail không xuất bản lên web nữa (giấu giá nhập, % lãi).
@@ -267,9 +292,9 @@ async function layRetail(){
     if(lan>1) await ngu(1000*(lan-1));
     const ctl=new AbortController(), hg=setTimeout(()=>ctl.abort(),25000);
     try{
-      const t=await (await fetch(API+"?viec=retail&t="+Date.now(),{signal:ctl.signal})).text();
+      const t=await (await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({hanhDong:"retail",pin:docPin()}),signal:ctl.signal})).text();
       let j; try{ j=JSON.parse(t); }catch{ throw new Error(/không thể mở tệp|unable to open/i.test(t)?"Google tạm thời không phản hồi.":"Apps Script trả về nội dung lạ."); }
-      if(j && j.ok===false) throw new LoiCot((j.loi||"Apps Script báo lỗi")+".");
+      if(j && j.ok===false){ const e=new LoiCot((j.loi||"Apps Script báo lỗi")+"."); e.pin=j.maLoi==="PIN"; throw e; }
       if(j && Array.isArray(j.retail)) return j;
       loi=new Error("Google trả về dữ liệu không đúng dạng.");
     }catch(e){
@@ -290,6 +315,33 @@ function apDung(j){
 }
 function veNutBuoc(){ document.querySelectorAll("#stepToggle button").forEach(x=>x.classList.toggle("on",+x.dataset.step===step)); }
 const gioLuc=iso=>{ const d=new Date(iso); return isNaN(d)?"":d.toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"}); };
+
+/* ====== MÃ PIN CHUNG (tab CauHinh) — cần để xem giá nhập. Nhập một lần, lưu trong máy này. ====== */
+const KHOA_PIN="b2_pin";
+const docPin=()=>{ try{ return localStorage.getItem(KHOA_PIN)||""; }catch{ return ""; } };
+const luuPin=p=>{ try{ p?localStorage.setItem(KHOA_PIN,p):localStorage.removeItem(KHOA_PIN); }catch{} };
+/* Mở khung nhập, kiểm với máy chủ (lệnh kiemPin) — đúng mới lưu. Huỷ → null. */
+function hoiPin(){
+  const hop=$("hop-pin"), o=$("o-pin"), bao=$("loi-pin"), nut=$("nut-pin");
+  if(!hop.hidden) return Promise.resolve(null);
+  return new Promise(res=>{
+    o.value=""; bao.textContent=""; hop.hidden=false; setTimeout(()=>o.focus(),60);
+    const xong=v=>{ hop.hidden=true; nut.onclick=$("huy-pin").onclick=o.onkeydown=null; res(v); };
+    const thu=async()=>{
+      const pin=o.value.trim(); if(!pin){ bao.textContent="Nhập Mã PIN chung."; return; }
+      nut.disabled=true; nut.textContent="Đang kiểm tra…"; bao.textContent="";
+      try{
+        const t=await (await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({hanhDong:"kiemPin",pin})})).text();
+        let j=null; try{ j=JSON.parse(t); }catch{}
+        if(j && j.ok){ luuPin(pin); xong(pin); }
+        else bao.textContent=(j&&j.loi)||(/không thể mở tệp|unable to open/i.test(t)?"Google tạm thời không phản hồi — thử lại.":"Chưa kiểm tra được — thử lại.");
+      }catch(e){ bao.textContent="Mất kết nối — thử lại."; }
+      finally{ nut.disabled=false; nut.textContent="Xác nhận"; }
+    };
+    nut.onclick=thu; $("huy-pin").onclick=()=>xong(null);
+    o.onkeydown=e=>{ if(e.key==="Enter") thu(); if(e.key==="Escape") xong(null); };
+  });
+}
 
 /* ====== STATE ====== */
 let ITEMS=[];
@@ -382,6 +434,12 @@ function datMargin(m){
    Có bản lần trước trong máy thì vẽ ngay; bản mới tải ở nền rồi vẽ lại. */
 async function load(){
   const box=$("list");
+  /* Xem giá nhập cần Mã PIN chung — máy lạ không thấy gì, kể cả bản đã lưu trong máy */
+  if(!docPin() && !(await hoiPin())){
+    ITEMS=[]; $("listCap").textContent="";
+    box.innerHTML='<div class="err"><b>Cần Mã PIN chung để xem bảng giá</b>Xem ô "Mã PIN chung" ở tab CauHinh trong Google Sheet bayich2. Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Nhập PIN</button></div>';
+    return;
+  }
   let luu=null; try{ luu=JSON.parse(localStorage.getItem(KHOA_LUU)||"null"); }catch{}
   if(luu && Array.isArray(luu.retail)){ apDung(luu); render(); renderList(); }
   else box.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
@@ -393,6 +451,7 @@ async function load(){
     soLanTuThu=0; clearInterval(hgTuThu);
     render(); renderList();
   }catch(e){
+    if(e.pin){ luuPin(""); try{ localStorage.removeItem(KHOA_LUU); }catch{} ITEMS=[]; return load(); }   // PIN đã đổi → xoá bản lưu, hỏi lại
     if(luu && ITEMS.length){ $("listCap").innerHTML+=' · <span style="color:#b3261e">chưa tải được bản mới, đang dùng số lúc '+gioLuc(luu.thoiGian)+'</span>'; return; }
     ITEMS=[];
     $("listCap").textContent="";

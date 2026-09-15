@@ -1,7 +1,8 @@
 /**
  * Apps Script STANDALONE "bayich2_tinhgia" — backend CHỈ ĐỌC của trang Tính Giá (bayich2-tinhgia.vercel.app).
  *
- *  ĐỌC : doGet?viec=retail → các cột Retail trang cần + "Bước làm tròn" (tab CauHinh). KHÔNG có lệnh ghi.
+ *  ĐỌC : doPost {hanhDong:'retail', pin} → các cột Retail trang cần + "Bước làm tròn" (tab CauHinh) — cần Mã PIN chung.
+ *        KHÔNG có lệnh ghi.
  *
  * Thay cho link CSV công khai của tab Retail → tab Retail không cần xuất bản lên web nữa (giấu giá nhập, % lãi).
  * Cột tìm theo CHỮ TIÊU ĐỀ, không theo vị trí: chèn / đổi thứ tự cột Retail không làm tính sai.
@@ -20,12 +21,27 @@ var TRUONG_LAM_TRON = 'Bước làm tròn';
 var COT_BAT_BUOC = { ten: 'Mặt Hàng', giaNhapSi: 'Giá Nhập Sỉ', soLuong: 'Số Lượng' };
 var COT_PHU = { donViLe: 'Đơn Vị Lẻ', loiNhuan: '% Lợi Nhuận', giaLamTron: 'Giá Làm Tròn' };   // có thì dùng
 
-/* ══════════════════ ĐỌC ══════════════════ */
+/* ══════════════════ ĐỌC (cần Mã PIN chung) ══════════════════ */
 function doGet(e) {
   try {
     var viec = (e && e.parameter && e.parameter.viec) || 'ping';
-    if (viec === 'retail') return traLoi(docRetailTinhGia());
+    /* Đọc giá đã chuyển sang doPost {hanhDong:'retail', pin} — GET không trả giá nữa (trang bản cũ thì báo tải lại) */
+    if (viec === 'retail') return traLoi({ ok: false, maLoi: 'CU', loi: 'Trang đang là bản cũ — tải lại trang (xem giá giờ cần Mã PIN chung)' });
     return traLoi({ ok: true, ten: 'bayich2_tinhgia', thoiGian: new Date().toISOString() });
+  } catch (err) {
+    return traLoi({ ok: false, loi: String(err) });
+  }
+}
+
+/* {hanhDong:'retail', pin} → bảng Retail · {hanhDong:'kiemPin', pin} → kiểm PIN lúc nhập. Không có lệnh ghi nào. */
+function doPost(e) {
+  try {
+    var d = JSON.parse(e.postData.contents);
+    var p = kiemPin(SpreadsheetApp.openById(ID_BAYICH2), d.pin);
+    if (!p.ok) return traLoi(p);
+    if (d.hanhDong === 'kiemPin') return traLoi({ ok: true });
+    if (d.hanhDong === 'retail') return traLoi(docRetailTinhGia());
+    return traLoi({ ok: false, loi: 'Hành động không hợp lệ' });
   } catch (err) {
     return traLoi({ ok: false, loi: String(err) });
   }
@@ -88,6 +104,19 @@ function docCauHinhChung(ss) {
 function layTheoTen(gt, ds) {
   for (var i = 0; i < ds.length; i++) { var k = chuanHoa(ds[i]); if (k in gt) return gt[k]; }
   return undefined;
+}
+
+/* Mã PIN chung (tab CauHinh) — sai / thiếu thì chờ 2 giây như sổ bán hàng (chống dò PIN). Chép từ bayich2_doichieutoa. */
+var TRUONG_PIN = 'Mã PIN chung';
+function kiemPin(ss, pin) {
+  var dung = layTheoTen(docCauHinhChung(ss), [TRUONG_PIN]);
+  if (dung === undefined || String(dung).trim() === '')
+    return { ok: false, maLoi: 'THIEU_PIN', loi: 'Chưa có "' + TRUONG_PIN + '" trong tab ' + TAB_CAU_HINH + ' — chưa đọc được' };
+  if (String(pin == null ? '' : pin).trim() !== String(dung).trim()) {
+    Utilities.sleep(2000);
+    return { ok: false, maLoi: 'PIN', loi: 'Sai mã PIN — xem ô "' + TRUONG_PIN + '" ở tab ' + TAB_CAU_HINH };
+  }
+  return { ok: true };
 }
 
 /* Số từ ô Sheet: số giữ nguyên, chữ kiểu "17.000" / "0,5" / "10%" thì bóc ra. Trống → null */
