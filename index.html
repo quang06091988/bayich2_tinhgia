@@ -105,6 +105,8 @@
   .note.show{display:block}
   .note.warn{background:var(--warn-bg);border:1px solid #ecd9ac;color:#7a5a12}
   .note.bad{background:var(--bad-bg);border:1px solid #eec6c2;color:#8f2f2f}
+  [hidden]{display:none!important}
+  .line .v .khop{color:var(--good)} .line .v .lech{color:var(--warn)}
 
   .sectiontitle{font-family:"Fraunces",serif;font-weight:600;font-size:20px;color:var(--green-d);margin:28px 4px 4px}
   .listcap{color:var(--muted);font-size:12.5px;margin:2px 4px 12px}
@@ -145,6 +147,7 @@
   </header>
 
   <div class="card">
+    <div class="note warn show" id="tuToa" style="margin:0 0 14px" hidden></div>
     <div class="seg" id="mode">
       <button data-mode="pack" class="on">Nhập theo lố</button>
       <button data-mode="unit">Nhập theo đơn vị</button>
@@ -199,6 +202,7 @@
         <button data-step="500">500</button>
         <button data-step="1000" class="on">1.000</button>
       </div>
+      <div class="line" id="soRetail" hidden><span class="k">Retail đang bán</span><span class="v" id="oRetail">—</span></div>
       <div class="badge">
         <div class="b neutral"><div class="n" id="bProfit">—</div><div class="t">Lời mỗi đơn vị</div></div>
         <div class="b neutral"><div class="n" id="bMargin">—</div><div class="t">Lãi thực sau làm tròn</div></div>
@@ -222,11 +226,10 @@
 
 <script>
 /* ====== NGUỒN DỮ LIỆU ======
-   Đọc trực tiếp tab Retail (published CSV). Web CHỈ dùng 4 cột cốt lõi theo VỊ TRÍ:
-     A = Mặt Hàng · C = Giá Nhập Sỉ · D = Số Lượng · E = Đơn Vị Lẻ
-   Các cột còn lại (Đơn Vị Sỉ, Giá Nhập Lẻ, % Lợi Nhuận, Giá Bán Lẻ, Giá Làm Tròn, Thứ Tự)
-   web BỎ QUA — bạn tự tính tay trong Excel, hai hệ chạy song song để đối chiếu sai sót.
-   Lưu ý: đọc theo vị trí cột nên đừng chèn/xóa cột giữa bảng (thêm cột mới ở cuối). */
+   Đọc tab Retail (published CSV), tìm cột theo TÊN tiêu đề — chèn, xoá hay đổi thứ tự cột đều không làm tính sai.
+   Bắt buộc: Mặt Hàng · Giá Nhập Sỉ · Số Lượng. Không bắt buộc: Đơn Vị Lẻ · % Lợi Nhuận · Giá Làm Tròn
+   (có thì chạm một món sẽ dùng đúng % lãi của món đó và so với giá Retail đang bán).
+   Trang này chỉ tính thử, không bao giờ ghi vào Sheet. */
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSDgOqo837JNRm5agJDJBTa4MOV0kkSzEYM-0XvYTXye6YaQxXFb3Q6dYn-Nn2N8PkzBVyZx26t6An9/pub?gid=932587590&single=true&output=csv";
 
 /* ====== HELPERS ====== */
@@ -263,9 +266,30 @@ function parseCSV(text){
   return rows;
 }
 
+/* Tìm cột theo tên: bỏ dấu, không phân biệt hoa/thường (giống timCot bên Đối chiếu toa) */
+const chuanHoa=s=>String(s==null?"":s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/đ/g,"d").replace(/[^a-z0-9]+/g," ").trim();
+const COT={ten:"Mặt Hàng",giaSi:"Giá Nhập Sỉ",sl:"Số Lượng",dvLe:"Đơn Vị Lẻ",loiNhuan:"% Lợi Nhuận",lamTron:"Giá Làm Tròn"};
+const COT_BAT_BUOC=["ten","giaSi","sl"];
+class LoiCot extends Error{}
+/* "10%" → 10 · ô số chưa định dạng % (0,1) → 10 */
+function docPhanTram(v){ const s=String(v==null?"":v); let n=parseNum(s); if(isFinite(n)&&!s.includes("%")&&n>0&&n<1) n*=100; return n; }
+function docRetail(rows){
+  const td=(rows[0]||[]).map(chuanHoa), c={};
+  Object.keys(COT).forEach(k=>{ c[k]=td.indexOf(chuanHoa(COT[k])); });
+  const thieu=COT_BAT_BUOC.filter(k=>c[k]<0).map(k=>COT[k]);
+  if(thieu.length) throw new LoiCot("Tab Retail thiếu cột: "+thieu.join(", ")+" — kiểm tra lại tên cột ở dòng tiêu đề.");
+  const o=(r,k)=>c[k]<0?"":(r[c[k]]||"");
+  return rows.slice(1).filter(r=>o(r,"ten").trim()).map(r=>{
+    const giaSi=parseNum(o(r,"giaSi")), sl=parseNum(o(r,"sl"))||1;
+    return {name:o(r,"ten").trim(), giaSi, sl, dvLe:o(r,"dvLe").trim(), giaLe:giaSi/sl,
+            loiNhuan:docPhanTram(o(r,"loiNhuan")), lamTron:parseNum(o(r,"lamTron"))};
+  }).filter(it=>isFinite(it.giaSi));
+}
+
 /* ====== STATE ====== */
 let ITEMS=[];
 let mode="pack", step=1000, roundedVal=0, autoRounded=true;
+let dangXem=null;   // món vừa chạm trong bảng — để so với giá Retail đang bán
 const $=id=>document.getElementById(id);
 
 /* ====== TÍNH TOÁN (một hàm duy nhất) ====== */
@@ -283,7 +307,7 @@ function render(){
   $("oSuggest").textContent = isFinite(suggest) ? fmt(suggest)+" đ" : "—";
   if(!isFinite(suggest)){
     roundedVal=0; $("rounded").textContent="—";
-    setBadge("bProfit","—","neutral"); setBadge("bMargin","—","neutral"); note("");
+    setBadge("bProfit","—","neutral"); setBadge("bMargin","—","neutral"); note(""); veSoRetail();
     return;
   }
   if(autoRounded) roundedVal=roundTo(suggest,step);
@@ -297,6 +321,15 @@ function render(){
   if(effM<0) note("Giá làm tròn đang thấp hơn giá nhập — bán ra là lỗ. Tăng giá lên một bước.","bad");
   else if(effM < m-1.5) note("Làm tròn xuống khiến lãi thực còn "+effM.toFixed(1)+"%, thấp hơn mức "+m+"% mong muốn. Cân nhắc làm tròn lên.","warn");
   else note("");
+  veSoRetail();
+}
+/* Món chạm từ bảng: so giá làm tròn đang tính với Giá Làm Tròn trong Retail */
+function veSoRetail(){
+  const box=$("soRetail"), it=dangXem;
+  if(!it || !isFinite(it.lamTron) || !roundedVal){ box.hidden=true; return; }
+  const lech=roundedVal-it.lamTron;
+  $("oRetail").innerHTML=fmt(it.lamTron)+" đ · "+(lech===0?'<span class="khop">khớp</span>':'<span class="lech">lệch '+(lech>0?"+":"−")+fmt(Math.abs(lech))+'</span>');
+  box.hidden=false;
 }
 function setBadge(id,txt,cls){
   const n=$(id); n.textContent=txt; n.closest(".b").className="b "+cls;
@@ -321,7 +354,7 @@ function renderList(){
     const pack=it.sl>1?`${fmt(it.giaSi)}đ/${it.sl} ${dv}`:`${fmt(it.giaSi)}đ`;
     el.innerHTML=`<div class="info"><div class="nm">${it.name}</div>
       <div class="meta">Nhập ${fmt(it.giaLe)}đ/${dv} · ${pack}</div></div>
-      <div class="pr"><div class="big">${fmt(sellOf(it))}đ</div><div class="sm">bán/${dv}</div></div>`;
+      <div class="pr"><div class="big">${fmt(sellOf(it))}đ</div><div class="sm">bán/${dv}${isFinite(it.lamTron)&&it.lamTron!==sellOf(it)?` · Retail ${fmt(it.lamTron)}`:""}</div></div>`;
     el.onclick=()=>loadItem(it);
     box.appendChild(el);
   });
@@ -329,8 +362,15 @@ function renderList(){
 function loadItem(it){
   if(it.sl>1){ setMode("pack"); $("packPrice").value=fmt(it.giaSi); $("packQty").value=it.sl; }
   else       { setMode("unit"); $("unitPrice").value=fmt(it.giaSi); }
-  autoRounded=true; render();
+  if(isFinite(it.loiNhuan)&&it.loiNhuan>=0) datMargin(it.loiNhuan);   // dùng đúng % lãi của món trong Retail
+  dangXem=it; $("tuToa").hidden=true;
+  autoRounded=true; render(); renderList();
   window.scrollTo({top:0,behavior:"smooth"});
+}
+function datMargin(m){
+  const v=Math.round(m*10)/10;
+  $("margin").value=String(v).replace(".",",");
+  document.querySelectorAll("#marginChips button").forEach(x=>x.classList.toggle("on",+x.dataset.m===v));
 }
 
 /* ====== TẢI CSV ====== */
@@ -341,16 +381,14 @@ async function load(){
     const url=CSV_URL+(CSV_URL.includes("?")?"&":"?")+"t="+Date.now();
     const res=await fetch(url);
     if(!res.ok) throw new Error("http");
-    const rows=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[0].trim());
-    ITEMS=rows.map(r=>{const giaSi=parseNum(r[2]),sl=parseNum(r[3])||1;
-      return {name:r[0].trim(),giaSi:giaSi,sl:sl,dvLe:(r[4]||"").trim(),giaLe:giaSi/sl};})
-      .filter(it=>isFinite(it.giaSi));
+    ITEMS=docRetail(parseCSV(await res.text()));
     if(!ITEMS.length) throw new Error("empty");
     renderList();
   }catch(e){
     ITEMS=[];
     $("listCap").textContent="";
-    box.innerHTML='<div class="err"><b>Chưa tải được bảng giá</b>Kiểm tra kết nối mạng và quyền chia sẻ của Sheet, rồi thử lại. Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại</button></div>';
+    const lyDo=e instanceof LoiCot ? e.message : "Kiểm tra kết nối mạng và quyền chia sẻ của Sheet, rồi thử lại.";
+    box.innerHTML='<div class="err"><b>Chưa tải được bảng giá</b>'+lyDo+' Máy tính phía trên vẫn dùng bình thường.<br/><button class="retry" onclick="load()">Thử lại</button></div>';
   }
 }
 
@@ -361,7 +399,7 @@ function setMode(m){
   $("packFields").style.display = m==="pack"?"":"none";
   $("unitFields").style.display = m==="unit"?"":"none";
 }
-document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{ setMode(b.dataset.mode); autoRounded=true; render(); });
+document.querySelectorAll("#mode button").forEach(b=>b.onclick=()=>{ setMode(b.dataset.mode); dangXem=null; autoRounded=true; render(); });
 document.querySelectorAll("#marginChips button").forEach(b=>b.onclick=()=>{
   $("margin").value=b.dataset.m;
   document.querySelectorAll("#marginChips button").forEach(x=>x.classList.toggle("on",x===b));
@@ -376,12 +414,24 @@ $("minus").onclick=()=>{ autoRounded=false; roundedVal=Math.max(0,roundedVal-ste
 $("plus").onclick =()=>{ autoRounded=false; roundedVal+=step; render(); };
 ["packPrice","packQty","unitPrice","margin"].forEach(id=>{
   const el=$(id);
-  el.addEventListener("input",()=>{ autoRounded=true; render(); if(id==="margin") renderList(); });
+  el.addEventListener("input",()=>{ if(id!=="margin") dangXem=null; autoRounded=true; render(); if(id==="margin") renderList(); });
   el.addEventListener("focus",()=>el.select());
 });
 $("q").addEventListener("input",renderList);
 
 /* ====== INIT ====== */
+/* Mở từ trang khác với giá có sẵn: ?gia=216000&sl=20&ten=… (vd link "Tính giá bán" ở Đối chiếu toa) */
+(function napTuLink(){
+  const q=new URLSearchParams(location.search), gia=parseNum(q.get("gia")), sl=parseNum(q.get("sl")), ten=(q.get("ten")||"").trim();
+  if(!isFinite(gia)||gia<=0) return;
+  const coSL=isFinite(sl)&&sl>0;
+  setMode("pack"); $("packPrice").value=fmt(gia); $("packQty").value=coSL?sl:"";
+  if(ten){
+    $("tuToa").textContent="Hàng mới trên toa: "+ten+" · đơn giá "+fmt(gia)+" đ."+(coSL?"":" Nhập số đơn vị trong lố để ra giá bán.");
+    $("tuToa").hidden=false;
+  }
+  if(!coSL) setTimeout(()=>$("packQty").focus(),300);
+})();
 load();
 render();
 </script>
