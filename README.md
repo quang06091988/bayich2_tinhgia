@@ -7,7 +7,7 @@ Mở từ trang khác với giá có sẵn: `?gia=216000&sl=20&ten=…` (vd link
 
 ## Dữ liệu
 
-Đọc tab Retail qua Apps Script riêng, **chỉ đọc** — tab Retail không cần xuất bản lên web (giấu giá nhập, % lãi).
+Đọc tab Retail qua Apps Script riêng, **chỉ đọc**, cần **Mã PIN chung** — tab Retail không cần xuất bản lên web (giấu giá nhập, % lãi).
 Máy chủ tìm cột theo tiêu đề (`Mặt Hàng`, `Giá Nhập Sỉ`, `Số Lượng`; có thì thêm `Đơn Vị Lẻ`, `% Lợi Nhuận`, `Giá Làm Tròn`)
 và trả kèm **Bước làm tròn** trong tab `CauHinh` — cùng một chỗ khai với Retail, Đối chiếu toa, Đồng bộ giá.
 Trang lưu bản lần gần nhất trong máy: mở là thấy ngay, bản mới tải ở nền.
@@ -19,7 +19,7 @@ index.html        trang web (Vercel: bayich2-tinhgia.vercel.app)
 og.png            ảnh xem trước khi chia sẻ
 .clasp.json       Script ID của backend, rootDir = appsscript
 appsscript/       backend — Apps Script STANDALONE "bayich2_tinhgia" (không deploy lên Vercel)
-  Code.js         doGet?viec=retail — không có lệnh ghi
+  Code.js         doPost {hanhDong: retail | kiemPin, pin} — cần Mã PIN chung, không có lệnh ghi
   appsscript.json
 ```
 
